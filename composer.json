@@ -1,0 +1,20 @@
+{
+  "name": "openwebx/opentraits",
+  "description": "several traits for >=php 7.4.x that will make your life easier" ,
+  "minimum-stability": "stable",
+  "license": "GPL-3.0-or-later",
+  "authors": [
+    {
+      "name": "Jens Reinemuth",
+      "email": "jens@reinemuth.rocks"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "openWebX\\openTraits\\": "src"
+    }
+  },
+  "require": {
+    "php": ">=7.4"
+  }
+}
