@@ -1,99 +1,89 @@
 <?php
 
-
 namespace openWebX\openTraits;
 
-
-use Exception;
+use BadMethodCallException;
 use RuntimeException;
 use Throwable;
 
-trait MagicVariables {
+trait MagicVariables
+{
+    // Für statische Magic-Properties
+    private static array $staticStore = [];
 
-    /**
-     * @param string $name
-     * @param $value
-     * @return MagicVariables
-     */
-    public function __set(string $name, $value) : self {
+    /** Dynamische Setter: $obj->foo = 'bar'; */
+    public function __set(string $name, mixed $value): static
+    {
         $this->$name = $value;
         return $this;
     }
 
-    /**
-     * @param string $name
-     * @return mixed|null
-     */
-    public function __get(string $name) {
-        return ($this->$name ?? null);
+    /** Dynamischer Getter: $obj->foo; */
+    public function __get(string $name): mixed
+    {
+        return $this->$name ?? null;
     }
 
     /**
-     * @param string $name
-     * @param array $arguments
-     * @return MagicVariables|mixed|null
-     * @throws Exception
+     * Magic-Aufrufe wie $obj->setFoo('bar') / $obj->getFoo()
      */
-    public function __call(string $name, array $arguments) {
+    public function __call(string $name, array $arguments): mixed
+    {
         $action = substr($name, 0, 3);
-        $var = lcfirst(substr($name, 3));
-        if ($action === 'set') {
-            if ($var !== '') {
-                $this->$var = $arguments[0];
-                return $this;
-            }
-        } elseif ($action === 'get') {
-            if ($var !== '') {
-                return $this->$var;
-            }
-        }
+        $prop   = lcfirst(substr($name, 3));
 
-        throw new RuntimeException('Magic method "' . $name . '" could not be invoked!?');
+        return match ($action) {
+            'set' => $prop !== ''
+                ? $this->__set($prop, $arguments[0])
+                : throw new BadMethodCallException("Method {$name} invalid"),
+
+            'get' => $prop !== ''
+                ? $this->__get($prop)
+                : throw new BadMethodCallException("Method {$name} invalid"),
+
+            default => throw new BadMethodCallException("Method {$name} not found"),
+        };
     }
 
     /**
-     * @param string $name
-     * @param array $arguments
-     * @return MagicVariables|mixed|null
-     * @throws Exception
+     * Statische Magic-Aufrufe wie ClassName::setFoo('bar') / ClassName::getFoo()
+     * speichert/liest Werte aus einem internen statischen Array.
      */
-    public static function __callStatic(string $name, array $arguments) {
+    public static function __callStatic(string $name, array $arguments): mixed
+    {
+        $action = substr($name, 0, 3);
+        $prop   = lcfirst(substr($name, 3));
+
         try {
-            $action = substr($name, 0, 3);
-            $var = lcfirst(substr($name, 3));
-            if ($action == 'set') {
-                if ($var !== '') {
-                    self::${$var} = $arguments[0];
-                    return true;
-                }
-            } elseif ($action == 'get') {
-                if ($var !== '') {
-                    return self::${$var};
-                }
-            }
-            return self::${$name}(...$arguments);
-        } catch (Throwable $throwable) {
-            var_dump($throwable->getMessage());
-            return null;
+            return match ($action) {
+                'set' => $prop !== ''
+                    ? static::$staticStore[$prop] = $arguments[0]
+                    : throw new BadMethodCallException("Static method {$name} invalid"),
+
+                'get' => $prop !== ''
+                    ? static::$staticStore[$prop] ?? null
+                    : throw new BadMethodCallException("Static method {$name} invalid"),
+
+                default => throw new BadMethodCallException("Static method {$name} not found"),
+            };
+        } catch (Throwable $e) {
+            throw new RuntimeException(
+                "Error in static call {$name}: " . $e->getMessage(),
+                0,
+                $e
+            );
         }
     }
 
-    /**
-     * @param string $name
-     * @return bool
-     */
-    public function __isset(string $name) : bool {
-        return isset($this->values[$name]);
+    /** isset($obj->foo) */
+    public function __isset(string $name): bool
+    {
+        return isset($this->$name);
     }
 
-    /**
-     * @param string $name
-     * @return MagicVariables
-     */
-    public function __unset(string $name) : self {
-        if (isset($this->values[$name])) {
-            unset($this->values[$name]);
-        }
-        return $this;
+    /** unset($obj->foo) */
+    public function __unset(string $name): void
+    {
+        unset($this->$name);
     }
 }
