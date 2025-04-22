@@ -12,10 +12,9 @@ trait MagicVariables
     private static array $staticStore = [];
 
     /** Dynamische Setter: $obj->foo = 'bar'; */
-    public function __set(string $name, mixed $value): static
+    public function __set(string $name, mixed $value): void
     {
         $this->$name = $value;
-        return $this;
     }
 
     /** Dynamischer Getter: $obj->foo; */
